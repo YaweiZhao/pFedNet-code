@@ -1,0 +1,572 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>optimizerForServer &#8212; Personalzied-FL v0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for optimizerForServer</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">sklearn.neighbors</span> <span class="kn">import</span> <span class="n">kneighbors_graph</span>
+<span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="kn">import</span> <span class="n">KMeans</span>
+<span class="kn">import</span> <span class="nn">cvxpy</span> <span class="k">as</span> <span class="nn">cp</span>
+
+<div class="viewcode-block" id="AuxiliaryMatrix"><a class="viewcode-back" href="../references/optimizerForServerModule.html#optimizerForServer.AuxiliaryMatrix">[docs]</a><span class="k">class</span> <span class="nc">AuxiliaryMatrix</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The auxiliary matrix: :math:`\mathbf{M}` or :math:`\mathbf{N}`. For example, :math:`\mathbf{M}` looks like::</span>
+
+<span class="sd">        1 0 0 </span>
+<span class="sd">        0 1 0 </span>
+<span class="sd">        0 0 0 </span>
+<span class="sd">        0 0 1</span>
+<span class="sd">        0 0 0 </span>
+<span class="sd">        0 0 0 </span>
+<span class="sd">    :math:`\mathbf{N}` looks like::</span>
+
+<span class="sd">        0 0 0</span>
+<span class="sd">        0 0 0</span>
+<span class="sd">        1 0 0</span>
+<span class="sd">        0 0 0</span>
+<span class="sd">        0 1 0</span>
+<span class="sd">        0 0 1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenFeatureIdList</span><span class="p">,</span> <span class="n">givenNumOfFeatures</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        givenFeatureIdList looks like: [1, 5, 8]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__featureIdList</span> <span class="o">=</span> <span class="n">givenFeatureIdList</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__numOfRows</span> <span class="o">=</span> <span class="n">givenNumOfFeatures</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__numOfCols</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__featureIdList</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__auxiliaryMat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__generate</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__generate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__numOfRows</span><span class="p">)</span>
+        <span class="n">mat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">__numOfRows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__numOfCols</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__numOfCols</span><span class="p">):</span>
+            <span class="n">mat</span><span class="p">[:,</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">I</span><span class="p">[:,</span><span class="bp">self</span><span class="o">.</span><span class="n">__featureIdList</span><span class="p">[</span><span class="n">j</span><span class="p">]]</span>
+            <span class="k">pass</span>
+        <span class="k">return</span> <span class="n">mat</span>
+    
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__auxiliaryMat</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="MMatrix"><a class="viewcode-back" href="../references/optimizerForServerModule.html#optimizerForServer.MMatrix">[docs]</a><span class="k">class</span> <span class="nc">MMatrix</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The auxiliary matrix: :math:`\mathbf{M}`. For example, :math:`\mathbf{M}` looks like::</span>
+
+<span class="sd">        1 0 0</span>
+<span class="sd">        0 1 0</span>
+<span class="sd">        0 0 0</span>
+<span class="sd">        0 0 1</span>
+<span class="sd">        0 0 0</span>
+<span class="sd">        0 0 0</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenFeatureIdListOfSharingComponent</span><span class="p">,</span> <span class="n">givenNumOfFeatures</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        *givenFeatureIdListOfSharingComponent* looks like: [1, 5, 8]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__M</span> <span class="o">=</span> <span class="n">AuxiliaryMatrix</span><span class="p">(</span><span class="n">givenFeatureIdList</span><span class="o">=</span><span class="n">givenFeatureIdListOfSharingComponent</span><span class="p">,</span> <span class="n">givenNumOfFeatures</span><span class="o">=</span><span class="n">givenNumOfFeatures</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__M</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="NMatrix"><a class="viewcode-back" href="../references/optimizerForServerModule.html#optimizerForServer.NMatrix">[docs]</a><span class="k">class</span> <span class="nc">NMatrix</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The auxiliary matrix::math:`\mathbf{N}`. For example, :math:`\mathbf{N}` looks like:</span>
+
+<span class="sd">        0 0 0</span>
+<span class="sd">        0 0 0</span>
+<span class="sd">        1 0 0</span>
+<span class="sd">        0 0 0</span>
+<span class="sd">        0 1 0</span>
+<span class="sd">        0 0 1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenFeatureIdListOfPersonalizedComponent</span><span class="p">,</span> <span class="n">givenNumOfFeatures</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        *givenFeatureIdListOfPersonalizedComponent* looks like: [1, 5, 8]</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__N</span> <span class="o">=</span> <span class="n">AuxiliaryMatrix</span><span class="p">(</span><span class="n">givenFeatureIdList</span><span class="o">=</span><span class="n">givenFeatureIdListOfPersonalizedComponent</span><span class="p">,</span> <span class="n">givenNumOfFeatures</span><span class="o">=</span><span class="n">givenNumOfFeatures</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__N</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="QQMatrix"><a class="viewcode-back" href="../references/optimizerForServerModule.html#optimizerForServer.QQMatrix">[docs]</a><span class="k">class</span> <span class="nc">QQMatrix</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Symetric and positive defined matrix. For example the auxiliary matrix may be :math:`\mathbf{Q}^\\top\mathbf{Q}` or :math:`\mathbf{Q}\mathbf{Q}^\\top`.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenQMatrix</span><span class="p">,</span> <span class="n">givenTransposeOperatorLoc</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">givenTransposeOperatorLoc</span> <span class="o">==</span> <span class="s1">&#39;left&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__mat</span> <span class="o">=</span> <span class="n">givenQMatrix</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">givenQMatrix</span>
+        <span class="k">if</span> <span class="n">givenTransposeOperatorLoc</span> <span class="o">==</span> <span class="s1">&#39;right&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__mat</span> <span class="o">=</span> <span class="n">givenQMatrix</span> <span class="o">@</span> <span class="n">givenQMatrix</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">eigValue</span><span class="p">,</span> <span class="n">eigVec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eigh</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__mat</span><span class="p">)</span> <span class="c1"># mat = P * Sigma * P^{-1}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sigma</span> <span class="o">=</span> <span class="n">eigValue</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__P</span> <span class="o">=</span> <span class="n">eigVec</span>
+        <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__mat</span>
+    
+    <span class="k">def</span> <span class="nf">getEigenValue</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sigma</span>
+    
+    <span class="k">def</span> <span class="nf">getEigenVec</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__P</span>
+    <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="QMatrix"><a class="viewcode-back" href="../references/optimizerForServerModule.html#optimizerForServer.QMatrix">[docs]</a><span class="k">class</span> <span class="nc">QMatrix</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The difference matrix: :math:`\mathbf{Q}` (N by M), which is generated by graph :math:`\mathcal{G}`. </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenGraph</span><span class="p">):</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">givenGraph</span><span class="p">,</span> <span class="n">GraphGenerater</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__graph</span> <span class="o">=</span> <span class="n">givenGraph</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__diffMat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__init</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">__init</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Q: N nodes by M edges.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">adjacentMat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__graph</span><span class="o">.</span><span class="n">getAdjacentMat</span><span class="p">()</span>
+        <span class="p">(</span><span class="n">N</span><span class="p">,</span> <span class="n">N</span><span class="p">)</span> <span class="o">=</span> <span class="n">adjacentMat</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">edgeList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span> <span class="c1"># for a client</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span> <span class="c1"># its neighbours</span>
+                <span class="k">if</span> <span class="n">adjacentMat</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                    <span class="n">vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
+                    <span class="n">vec</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">vec</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span>
+                    <span class="n">edgeList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">vec</span><span class="p">)</span>
+        <span class="n">QMat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">edgeList</span><span class="p">))</span>            
+        <span class="k">return</span> <span class="n">QMat</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__diffMat</span>
+    <span class="k">pass</span></div>
+
+<span class="k">class</span> <span class="nc">SketchMatrixForSimilarity</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenSketchList</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        *givenSketchList*: N by ?, every row represents a data sketch of a node.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sketchMat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">givenSketchList</span><span class="p">)</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__sketchMat</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">GraphGenerater</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenNumOfNode</span><span class="p">,</span> <span class="n">givenSimilaritySpace</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__similaritySpace</span> <span class="o">=</span> <span class="n">givenSimilaritySpace</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__N</span> <span class="o">=</span> <span class="n">givenNumOfNode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__numOfNeighbors</span> <span class="o">=</span> <span class="mi">5</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__adjacentMat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generateAdjacentMat</span><span class="p">()</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">generateAdjacentMat</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">adjacentMat</span> <span class="o">=</span> <span class="n">kneighbors_graph</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__similaritySpace</span><span class="o">.</span><span class="n">get</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">__numOfNeighbors</span><span class="p">,</span> <span class="n">mode</span> <span class="o">=</span> <span class="s1">&#39;connectivity&#39;</span><span class="p">,</span> <span class="n">include_self</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">adjacentMat</span>
+
+    <span class="k">def</span> <span class="nf">getAdjacentMat</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__adjacentMat</span>
+    <span class="k">pass</span>
+
+<div class="viewcode-block" id="ADMM"><a class="viewcode-back" href="../references/optimizerForServerModule.html#optimizerForServer.ADMM">[docs]</a><span class="k">class</span> <span class="nc">ADMM</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Optimize Z by performing:</span>
+<span class="sd">    </span>
+<span class="sd">    .. math:: \min_{\\mathbf{Z}} \\frac{\\mathbf{1}_{d}^\\top ((\\mathbf{N}^\\top \\mathbf{\\nabla}) \odot \\mathbf{Z}) \\mathbf{1}_N}{N} + \lambda \left \| \\mathbf{Z}\\mathbf{Q} \\right\|_{1,p} + \\frac{1}{2 \eta_t} \\left\| \\mathbf{Z} - \\mathbf{Z}_t \\right\|_F^2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenQ</span><span class="p">,</span> <span class="n">givenNabla</span><span class="p">,</span> <span class="n">givenNMat</span><span class="p">,</span> <span class="n">givenZ</span><span class="p">,</span> <span class="n">givenEta</span><span class="p">,</span> <span class="n">givenLambda</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__Q</span> <span class="o">=</span> <span class="n">givenQ</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__N</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__M</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Q</span><span class="o">.</span><span class="n">shape</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__Nabla</span> <span class="o">=</span> <span class="n">givenNabla</span> <span class="c1"># d by N</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span> <span class="o">=</span> <span class="n">givenNMat</span> <span class="c1"># d by d2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__Zt</span> <span class="o">=</span> <span class="n">givenZ</span> <span class="c1"># d2 by N</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__d2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span><span class="o">.</span><span class="n">shape</span>
+        <span class="n">QQ</span> <span class="o">=</span> <span class="n">QQMatrix</span><span class="p">(</span><span class="n">givenQMatrix</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__Q</span><span class="p">,</span> <span class="n">givenTransposeOperatorLoc</span><span class="o">=</span><span class="s1">&#39;right&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__P</span> <span class="o">=</span> <span class="n">QQ</span><span class="o">.</span><span class="n">getEigenVec</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__sigma</span> <span class="o">=</span> <span class="n">QQ</span><span class="o">.</span><span class="n">getEigenValue</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__eta</span> <span class="o">=</span> <span class="n">givenEta</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__lambda</span> <span class="o">=</span> <span class="n">givenLambda</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__W</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Omega</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">__d2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__N</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">__d2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__M</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">__d2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__M</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__K</span> <span class="o">=</span> <span class="mi">25</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">execute</span><span class="p">()</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="ADMM.updateZbyCVX"><a class="viewcode-back" href="../references/optimizerForServerModule.html#optimizerForServer.ADMM.updateZbyCVX">[docs]</a>    <span class="k">def</span> <span class="nf">updateZbyCVX</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update :math:`\\mathbf{Z}` by performing:</span>
+<span class="sd">        </span>
+<span class="sd">        .. math:: \min_{\\mathbf{Z}} \\frac{\\mathbf{1}_{d}^\\top ((\\mathbf{N}^\\top \\mathbf{\\nabla}) \odot \\mathbf{Z}) \\mathbf{1}_N}{N} + \\frac{1}{2 \eta_t} || \\mathbf{Z} - \\mathbf{Z}_t ||_F^2 + \\mathbf{1}_{d_2}^\\top (\\mathbf{\Omega}_k \odot (\\mathbf{Z}\\mathbf{Q}))\\mathbf{1}_{M}  + \\frac{\\rho}{2}\\left\| \\mathbf{Z}\\mathbf{Q} - \\mathbf{\Omega}_k \\right\|_F^2</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__Z</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">hZ</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">multiply</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Nabla</span><span class="p">),</span> <span class="n">Z</span><span class="p">)))</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">__N</span> <span class="o">+</span> <span class="mf">1.0</span><span class="o">/</span><span class="p">(</span><span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">__eta</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">Z</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Zt</span><span class="p">,</span> <span class="s1">&#39;fro&#39;</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">middle</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__Omega</span><span class="p">,</span> <span class="p">(</span><span class="n">Z</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Q</span><span class="p">))))</span>
+        <span class="n">right</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__W</span> <span class="o">-</span> <span class="n">Z</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Q</span><span class="p">,</span> <span class="s1">&#39;fro&#39;</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Minimize</span><span class="p">(</span> <span class="n">hZ</span> <span class="o">+</span> <span class="n">middle</span> <span class="o">+</span> <span class="n">right</span><span class="p">)</span>
+        <span class="n">problem</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+        <span class="n">problem</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="o">=</span> <span class="n">Z</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">return</span> <span class="n">Z</span><span class="o">.</span><span class="n">value</span></div>
+
+    <span class="k">def</span> <span class="nf">__updateZ</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update Z by performing:</span>
+
+<span class="sd">        .. math:: </span>
+<span class="sd">        - min_Z 1 ((N Nabla) \cdot Z) 1/N + 1/(2 eta) || Z - Z_t ||_F^2</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">left</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__eta</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__W</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Q</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Omega</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Q</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Nabla</span><span class="p">)</span><span class="o">/</span><span class="bp">self</span><span class="o">.</span><span class="n">__N</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Zt</span>
+        <span class="n">right</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__P</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">__eta</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">__sigma</span><span class="p">))</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__P</span><span class="o">.</span><span class="n">T</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="o">=</span> <span class="n">left</span> <span class="o">@</span> <span class="n">right</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span>
+
+    <span class="k">def</span> <span class="nf">__updateWbyCVX</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">W</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__W</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">columni</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__W</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">reg</span> <span class="o">=</span> <span class="n">reg</span> <span class="o">+</span> <span class="n">cp</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="n">W</span><span class="p">[:,</span> <span class="n">columni</span><span class="p">])</span>
+        <span class="n">left</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__lambda</span> <span class="o">*</span> <span class="n">reg</span> 
+        <span class="n">right</span> <span class="o">=</span> <span class="mf">0.5</span><span class="o">*</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">W</span> <span class="o">-</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Q</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Omega</span><span class="p">),</span><span class="s1">&#39;fro&#39;</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Minimize</span><span class="p">(</span> <span class="n">left</span> <span class="o">+</span> <span class="n">right</span><span class="p">)</span>
+        <span class="n">problem</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+        <span class="n">problem</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__W</span> <span class="o">=</span> <span class="n">W</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">return</span> <span class="n">W</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">__updateW</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__W</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">right</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Q</span><span class="p">[:,</span><span class="n">m</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Omega</span><span class="p">[:,</span><span class="n">m</span><span class="p">]</span>
+            <span class="n">left</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__lambda</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">right</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__W</span><span class="p">[:,</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="n">left</span> <span class="o">*</span> <span class="n">right</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__W</span>
+
+    <span class="k">def</span> <span class="nf">__updateOmega</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__Omega</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Omega</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Q</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">__W</span><span class="p">)</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">execute</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__K</span><span class="p">):</span>
+            <span class="c1"># update Z</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__updateZ</span><span class="p">()</span>
+            <span class="c1"># update W</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__updateW</span><span class="p">()</span>
+            <span class="c1"># update Omega</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__updateOmega</span><span class="p">()</span>
+            <span class="k">pass</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">getZ</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span>    
+    <span class="k">pass</span></div>
+
+<span class="k">class</span> <span class="nc">AlternativeOptimizer</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenDataFederation</span><span class="p">,</span> <span class="n">givenFormulationSettings</span><span class="p">,</span> <span class="n">givenFederatedLearningSettings</span><span class="p">,</span> <span class="n">givenPersonalizedGradsFun</span><span class="p">):</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">givenDataFederation</span><span class="p">,</span> <span class="n">DataFederation</span><span class="p">))</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">givenFormulationSettings</span><span class="p">,</span> <span class="n">FormulationSettings</span><span class="p">))</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">givenFederatedLearningSettings</span><span class="p">,</span> <span class="n">FederatedLearningSettings</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__dataFederation</span> <span class="o">=</span> <span class="n">givenDataFederation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__formulationSettings</span> <span class="o">=</span> <span class="n">givenFormulationSettings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__federatedLearningSettings</span> <span class="o">=</span> <span class="n">givenFederatedLearningSettings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__MMat</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__formulationSettings</span><span class="o">.</span><span class="n">getMMat</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">__formulationSettings</span><span class="o">.</span><span class="n">getNMat</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__QMat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dataFederation</span><span class="o">.</span><span class="n">generateQMat</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__personalizedGradsFun</span> <span class="o">=</span> <span class="n">givenPersonalizedGradsFun</span> <span class="c1"># a function address</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__d1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__d2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__N</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__MMat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">__federatedLearningSettings</span><span class="o">.</span><span class="n">getNumOfClients</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__x</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__d1</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">__d2</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__N</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__personalizedModelVecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;i,j-&gt;ij&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__MMat</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__N</span><span class="p">))</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="c1"># d by N</span>
+        <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="nf">computePersonalizedGradients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenPersonalizedModels</span><span class="p">):</span>
+        <span class="n">personalizedGrads</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__personalizedGradsFun</span><span class="p">(</span><span class="n">givenPersonalizedModels</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">personalizedGrads</span>
+    
+    <span class="k">def</span> <span class="nf">getPersonalizedModel</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__personalizedModelVecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;i,j-&gt;ij&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__MMat</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__N</span><span class="p">))</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="c1"># d by N</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__personalizedModelVecs</span>
+
+    <span class="k">def</span> <span class="nf">updateX</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__updateXbySGD</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">updateZ</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__updateZbySGD</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__updateXbySGD</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update x by solving:</span>
+<span class="sd">        - min_{x} \frac{1}{N} \sum_{n=1}^N f_n(Mx + Nz^{(n)}; D_n)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">ix</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">30</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__personalizedModelVecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;i,j-&gt;ij&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__MMat</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__N</span><span class="p">))</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="c1"># d by N</span>
+            <span class="n">nablaMat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">computePersonalizedGradients</span><span class="p">(</span><span class="n">givenPersonalizedModels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__personalizedModelVecs</span><span class="p">))</span>
+            <span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__x</span> <span class="o">-</span> <span class="n">alpha</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__MMat</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">nablaMat</span><span class="p">)</span> <span class="o">@</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__N</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">__N</span> 
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">__updateZbyCVX</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenNablaMat</span><span class="p">,</span> <span class="n">givenEta</span><span class="p">,</span> <span class="n">givenLambda</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update Z by solving:</span>
+<span class="sd">        - min_{Z} 1/N 1 (N G) \cdot Z 1 + lambda || ZQ ||_{1,p} + 1/(2 eta) || Z - Z_t ||_F^2</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Variable</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">__Z</span><span class="o">.</span><span class="n">shape</span><span class="p">))</span>
+        <span class="n">reg</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">columni</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__QMat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+            <span class="n">reg</span> <span class="o">=</span> <span class="n">reg</span> <span class="o">+</span> <span class="n">cp</span><span class="o">.</span><span class="n">norm2</span><span class="p">(</span><span class="n">Z</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__QMat</span><span class="p">[:,</span><span class="n">columni</span><span class="p">])</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Minimize</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">__N</span> <span class="o">*</span> <span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">multiply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">givenNablaMat</span><span class="p">,</span> <span class="n">Z</span><span class="p">)))</span> <span class="o">+</span> <span class="n">givenLambda</span> <span class="o">*</span> <span class="n">reg</span> <span class="o">+</span> <span class="mf">0.5</span><span class="o">/</span><span class="n">givenEta</span><span class="o">*</span><span class="p">(</span><span class="n">cp</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">Z</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">__Z</span><span class="p">,</span> <span class="s1">&#39;fro&#39;</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+        <span class="n">problem</span> <span class="o">=</span> <span class="n">cp</span><span class="o">.</span><span class="n">Problem</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span>
+        <span class="n">problem</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="o">=</span> <span class="n">Z</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">return</span> <span class="n">Z</span><span class="o">.</span><span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">__updateZbySGD</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Update Z by solving:</span>
+<span class="sd">        - min_{Z} 1/N 1 (N G) \cdot Z 1 + lambda || ZQ ||_{1,p} + 1/(2 eta) || Z - Z_t ||_F^2</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">iz</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">500</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__personalizedModelVecs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">einsum</span><span class="p">(</span><span class="s1">&#39;i,j-&gt;ij&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__MMat</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__N</span><span class="p">))</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="c1"># d by N</span>
+            <span class="n">nablaMat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">transpose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">computePersonalizedGradients</span><span class="p">(</span><span class="n">givenPersonalizedModels</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__personalizedModelVecs</span><span class="p">))</span>
+            <span class="n">alpha</span><span class="p">,</span> <span class="n">lambdav</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__formulationSettings</span><span class="o">.</span><span class="n">getLambda</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span> <span class="o">=</span> <span class="n">ADMM</span><span class="p">(</span><span class="n">givenQ</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__QMat</span><span class="p">,</span> <span class="n">givenNabla</span><span class="o">=</span><span class="n">nablaMat</span><span class="p">,</span> <span class="n">givenNMat</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span><span class="p">,</span> <span class="n">givenZ</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__Z</span><span class="p">,</span> <span class="n">givenEta</span><span class="o">=</span><span class="n">alpha</span><span class="p">,</span> <span class="n">givenLambda</span><span class="o">=</span><span class="n">lambdav</span><span class="p">)</span><span class="o">.</span><span class="n">getZ</span><span class="p">()</span> 
+            <span class="k">pass</span>
+        <span class="k">pass</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">FormulationSettings</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenFeatureIdListOfSharingComponent</span><span class="p">,</span> <span class="n">givenFeatureIdListOfPersonalizedComponent</span><span class="p">,</span> <span class="n">givenNumberOfSamples</span><span class="p">,</span> <span class="n">givenLambda</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__d1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__d2</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">givenFeatureIdListOfSharingComponent</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">givenFeatureIdListOfPersonalizedComponent</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__d</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__d1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__d2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__N</span> <span class="o">=</span> <span class="n">givenNumberOfSamples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__MMat</span> <span class="o">=</span> <span class="n">MMatrix</span><span class="p">(</span><span class="n">givenFeatureIdListOfSharingComponent</span><span class="o">=</span><span class="n">givenFeatureIdListOfSharingComponent</span><span class="p">,</span> <span class="n">givenNumOfFeatures</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__d</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span> <span class="o">=</span> <span class="n">NMatrix</span><span class="p">(</span><span class="n">givenFeatureIdListOfPersonalizedComponent</span><span class="o">=</span><span class="n">givenFeatureIdListOfPersonalizedComponent</span><span class="p">,</span> <span class="n">givenNumOfFeatures</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__d</span><span class="p">)</span><span class="o">.</span><span class="n">get</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__lambda</span> <span class="o">=</span> <span class="n">givenLambda</span>
+
+    <span class="k">def</span> <span class="nf">getNumberOfSamples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__N</span>
+    
+    <span class="k">def</span> <span class="nf">getNumberOfFeatures</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__d</span>
+
+    <span class="k">def</span> <span class="nf">getNumberOfSharingFeatures</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__d1</span>
+    
+    <span class="k">def</span> <span class="nf">getNumberOfPersonalizedFeatures</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__d2</span>
+    
+    <span class="k">def</span> <span class="nf">getMMat</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__MMat</span>
+    
+    <span class="k">def</span> <span class="nf">getNMat</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__NMat</span>
+    
+    <span class="k">def</span> <span class="nf">getLambda</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__lambda</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">DataFederation</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenDatasetObj</span><span class="p">,</span> <span class="n">givenFederatedLearningSettings</span><span class="p">):</span>
+        <span class="k">assert</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">givenFederatedLearningSettings</span><span class="p">,</span> <span class="n">FederatedLearningSettings</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__datasetObj</span> <span class="o">=</span> <span class="n">givenDatasetObj</span> <span class="c1"># numberOfSamples by numberOfFeatures</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__federatedLearningSettings</span> <span class="o">=</span> <span class="n">givenFederatedLearningSettings</span>
+        <span class="k">pass</span>
+
+    <span class="k">def</span> <span class="nf">__generateSampleIdListForClientsByEqualPartation</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">sampleIdsOfClientList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__federatedLearningSettings</span><span class="o">.</span><span class="n">getNumOfClients</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">clienti</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="n">moduleOfSamples</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">true_divide</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getNumberOfSamples</span><span class="p">(),</span> <span class="n">N</span><span class="p">))</span>
+            <span class="n">startidForClient</span><span class="p">,</span> <span class="n">endidForClient</span> <span class="o">=</span> <span class="n">clienti</span> <span class="o">*</span> <span class="n">moduleOfSamples</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">getNumberOfSamples</span><span class="p">(),</span> <span class="p">(</span><span class="n">clienti</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">moduleOfSamples</span><span class="p">])</span>
+            <span class="n">sampleIdsOfClientList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">startidForClient</span><span class="p">,</span> <span class="n">endidForClient</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">sampleIdsOfClientList</span>
+    
+    <span class="k">def</span> <span class="nf">__generateSampleIdListForClientsByClustering</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__federatedLearningSettings</span><span class="o">.</span><span class="n">getNumOfClients</span><span class="p">()</span>
+        <span class="n">dataMat</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__datasetObj</span><span class="o">.</span><span class="n">getSampleMat</span><span class="p">()</span>
+        <span class="n">kmeans</span> <span class="o">=</span> <span class="n">KMeans</span><span class="p">(</span><span class="n">n_clusters</span><span class="o">=</span><span class="n">N</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">dataMat</span><span class="p">)</span>
+        <span class="n">label</span> <span class="o">=</span> <span class="n">kmeans</span><span class="o">.</span><span class="n">labels_</span>
+        <span class="n">sampleIdsOfClientList</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">clienti</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">):</span>
+            <span class="n">sampleIds</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">label</span> <span class="o">==</span> <span class="n">clienti</span><span class="p">)</span>
+            <span class="n">sampleIdsOfClientList</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">sampleIds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+        <span class="k">return</span> <span class="n">sampleIdsOfClientList</span>
+
+    <span class="k">def</span> <span class="nf">__generateSampleIdListForClientsByAffine</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        every client has only ONE sample. Defaultly, numberOfClients = numberOfSamples.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__federatedLearningSettings</span><span class="o">.</span><span class="n">getNumOfClients</span><span class="p">()</span>
+        <span class="n">sampleIdsOfClientList</span> <span class="o">=</span> <span class="p">[[</span><span class="n">clienti</span><span class="p">]</span> <span class="k">for</span> <span class="n">clienti</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">sampleIdsOfClientList</span>
+
+    <span class="k">def</span> <span class="nf">generateSampleIdListForClients</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenType</span> <span class="o">=</span> <span class="s1">&#39;affine&#39;</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">givenType</span> <span class="o">==</span> <span class="s1">&#39;equal partation&#39;</span><span class="p">:</span>
+            <span class="n">sampleIds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__generateSampleIdListForClientsByEqualPartation</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">givenType</span> <span class="o">==</span> <span class="s1">&#39;affine&#39;</span><span class="p">:</span>
+            <span class="n">sampleIds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__generateSampleIdListForClientsByAffine</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">givenType</span> <span class="o">==</span> <span class="s1">&#39;user defined&#39;</span><span class="p">:</span>
+            <span class="n">sampleIds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__generateSampleIdListForClientsByClustering</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">sampleIds</span>
+    
+    <span class="k">def</span> <span class="nf">generateQMat</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__federatedLearningSettings</span><span class="o">.</span><span class="n">getNumOfClients</span><span class="p">()</span>
+        <span class="n">sampleIdListOfClient</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">generateSampleIdListForClients</span><span class="p">()</span>
+        <span class="n">dataMatListOfClient</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">clienti</span><span class="p">,</span> <span class="n">sampleIdsOfClient</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sampleIdListOfClient</span><span class="p">):</span>
+            <span class="n">dataMatListOfClient</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__datasetObj</span><span class="o">.</span><span class="n">querySampleList</span><span class="p">(</span><span class="n">givenSampleIds</span> <span class="o">=</span> <span class="n">sampleIdsOfClient</span><span class="p">))</span>
+        <span class="n">sketchList</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">dataMatListOfClient</span><span class="p">[</span><span class="n">clienti</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">clienti</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N</span><span class="p">)]</span>
+        <span class="n">QMat</span> <span class="o">=</span> <span class="n">QMatrix</span><span class="p">(</span><span class="n">givenGraph</span><span class="o">=</span><span class="n">GraphGenerater</span><span class="p">(</span><span class="n">givenNumOfNode</span> <span class="o">=</span> <span class="n">N</span><span class="p">,</span> <span class="n">givenSimilaritySpace</span> <span class="o">=</span> <span class="n">SketchMatrixForSimilarity</span><span class="p">(</span><span class="n">givenSketchList</span><span class="o">=</span><span class="n">sketchList</span><span class="p">)))</span><span class="o">.</span><span class="n">get</span><span class="p">()</span> <span class="c1"># N by M</span>
+        <span class="k">return</span> <span class="n">QMat</span> 
+    
+    <span class="k">def</span> <span class="nf">getDatasetObj</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__datasetObj</span>
+    
+    <span class="k">def</span> <span class="nf">querySample</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenSampleId</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__datasetObj</span><span class="o">.</span><span class="n">querySample</span><span class="p">(</span><span class="n">givenSampleId</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">getNumberOfSamples</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__datasetObj</span><span class="o">.</span><span class="n">getNumberOfSamples</span><span class="p">()</span>
+    
+    <span class="k">def</span> <span class="nf">getNumberOfFeatures</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__datasetObj</span><span class="o">.</span><span class="n">getNumberOfFeatures</span><span class="p">()</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">FederatedLearningSettings</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenNumberOfClients</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span> <span class="n">givenNumberOfIterations</span> <span class="o">=</span> <span class="mi">100</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__numOfClients</span> <span class="o">=</span> <span class="n">givenNumberOfClients</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__numOfIterations</span> <span class="o">=</span> <span class="n">givenNumberOfIterations</span>
+
+    <span class="k">def</span> <span class="nf">getNumOfClients</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__numOfClients</span>
+    
+    <span class="k">def</span> <span class="nf">getNumOfIterations</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__numOfIterations</span>
+    <span class="k">pass</span>
+
+<span class="k">class</span> <span class="nc">PersonalizedModelSettings</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">givenFeatureIdListOfSharingComponent</span><span class="p">,</span> <span class="n">givenFeatureIdListOfPersonalizedComponent</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__featureIdListOfSharingComponent</span> <span class="o">=</span> <span class="n">givenFeatureIdListOfSharingComponent</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__featureIdListOfPersonalizedComponent</span> <span class="o">=</span> <span class="n">givenFeatureIdListOfPersonalizedComponent</span>
+        <span class="k">pass</span>
+    
+    <span class="k">def</span> <span class="nf">getFeatureIdListOfSharingComponent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__featureIdListOfSharingComponent</span>
+    
+    <span class="k">def</span> <span class="nf">getFeatureIdListOfPersonalizedComponent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__featureIdListOfPersonalizedComponent</span>
+    
+    <span class="k">def</span> <span class="nf">getNumberOfPersonalizedFeatures</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__featureIdListOfPersonalizedComponent</span><span class="p">)</span>
+    <span class="k">pass</span>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Personalzied-FL</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">INSTALL</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Yawei Zhao.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

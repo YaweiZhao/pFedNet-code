@@ -1,0 +1,215 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Dataset loader &#8212; Personalzied-FL v0.1 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="module-datasets">
+<span id="dataset-loader"></span><h1>Dataset loader<a class="headerlink" href="#module-datasets" title="Permalink to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="datasets.CovtypeOfLibsvm">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">datasets.</span></span><span class="sig-name descname"><span class="pre">CovtypeOfLibsvm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">givenFn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/datasets.html#CovtypeOfLibsvm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#datasets.CovtypeOfLibsvm" title="Permalink to this definition">¶</a></dt>
+<dd><p>The covtype dataset from the Libsvm website: <a class="reference external" href="https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html#covtype.binary">https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html#covtype.binary</a></p>
+<ul class="simple">
+<li><p>Features: 54</p></li>
+<li><p>Samples: 581,012</p></li>
+<li><p>Original label: 1, 2</p></li>
+<li><p>Task: classification (2 class)</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="datasets.HalfMoonsDataset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">datasets.</span></span><span class="sig-name descname"><span class="pre">HalfMoonsDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">givenFn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/datasets.html#HalfMoonsDataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#datasets.HalfMoonsDataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>The halfMoon dataset from the website: <a class="reference external" href="https://cs.joensuu.fi/sipu/datasets/jain.txt">https://cs.joensuu.fi/sipu/datasets/jain.txt</a></p>
+<ul class="simple">
+<li><p>Features: 2</p></li>
+<li><p>Samples: 373</p></li>
+<li><p>Original label: 1, 2</p></li>
+<li><p>Task: clustering (2 clusters)</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="datasets.HiggsOfLibsvm">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">datasets.</span></span><span class="sig-name descname"><span class="pre">HiggsOfLibsvm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">givenFn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/datasets.html#HiggsOfLibsvm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#datasets.HiggsOfLibsvm" title="Permalink to this definition">¶</a></dt>
+<dd><p>The ijcnn dataset from the Libsvm website: <a class="reference external" href="https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html#SUSY">https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html#SUSY</a></p>
+<ul class="simple">
+<li><p>Features: 28</p></li>
+<li><p>Samples: 11,000,000</p></li>
+<li><p>Original label: ?????????</p></li>
+<li><p>Task: classification (2 class)</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="datasets.Ijcnn1OfLibsvm">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">datasets.</span></span><span class="sig-name descname"><span class="pre">Ijcnn1OfLibsvm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">givenFn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/datasets.html#Ijcnn1OfLibsvm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#datasets.Ijcnn1OfLibsvm" title="Permalink to this definition">¶</a></dt>
+<dd><p>The ijcnn dataset from the Libsvm website: <a class="reference external" href="https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html#ijcnn1">https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html#ijcnn1</a></p>
+<ul class="simple">
+<li><p>Features: 22</p></li>
+<li><p>Samples: 49,990 + 91701</p></li>
+<li><p>Original label: 1, -1</p></li>
+<li><p>Task: classification (2 class)</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="datasets.IrisOfLibsvm">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">datasets.</span></span><span class="sig-name descname"><span class="pre">IrisOfLibsvm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">givenFn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/datasets.html#IrisOfLibsvm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#datasets.IrisOfLibsvm" title="Permalink to this definition">¶</a></dt>
+<dd><p>The iris dataset from the Libsvm website: <a class="reference external" href="https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass.html#iris">https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/multiclass.html#iris</a></p>
+<ul class="simple">
+<li><p>Features: 4</p></li>
+<li><p>Samples: 150</p></li>
+<li><p>Original label: 1, 2, 3</p></li>
+<li><p>Task: classification (3 class)</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="datasets.LibSvmDataset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">datasets.</span></span><span class="sig-name descname"><span class="pre">LibSvmDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">givenFnPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">givenNumberOfSamples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">givenNumberOfFeatures</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/datasets.html#LibSvmDataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#datasets.LibSvmDataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dataset is represented like the LIBSVM dataset. 
+Every sample and its label looks like: <span class="math notranslate nohighlight">\([\mathbf{y}, \mathbf{x_1}, \mathbf{x_2}, \mathbf{x_3}]\)</span>. There is <strong>NO</strong> header, and the first column, i.e. <span class="math notranslate nohighlight">\(\mathbf{y}\)</span>, represents label.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="datasets.LibSvmDataset.getDataMat">
+<span class="sig-name descname"><span class="pre">getDataMat</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/datasets.html#LibSvmDataset.getDataMat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#datasets.LibSvmDataset.getDataMat" title="Permalink to this definition">¶</a></dt>
+<dd><p>all samples. numberOfSamples by numberOfFeatures</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="datasets.LngxbhbcdexzlhzcxfxycDataset">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">datasets.</span></span><span class="sig-name descname"><span class="pre">LngxbhbcdexzlhzcxfxycDataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">givenFn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/datasets.html#LngxbhbcdexzlhzcxfxycDataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#datasets.LngxbhbcdexzlhzcxfxycDataset" title="Permalink to this definition">¶</a></dt>
+<dd><p>老年冠心病合并肠道恶性肿瘤患者出血风险预测数据集</p>
+<ul class="simple">
+<li><p>Features: 58</p></li>
+<li><p>Samples: 716</p></li>
+<li><p>Original label: 0, 1</p></li>
+<li><p>Task: classification (2 class)</p></li>
+</ul>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="datasets.StructureMedicalDatasets">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">datasets.</span></span><span class="sig-name descname"><span class="pre">StructureMedicalDatasets</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">givenFnPath</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">givenNumberOfSamples</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">givenNumberOfFeatures</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/datasets.html#StructureMedicalDatasets"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#datasets.StructureMedicalDatasets" title="Permalink to this definition">¶</a></dt>
+<dd><p>Every sample and its label looks like: <span class="math notranslate nohighlight">\([\mathbf{y}, \mathbf{x1}, \mathbf{x2}, \mathbf{x3}]\)</span>. There <strong>HAS</strong> header, and the first column, i.e. <span class="math notranslate nohighlight">\(\mathbf{y}\)</span>, represents label. 
+When conducting binary classification, labels include ‘-1’ and ‘1’.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="datasets.StructureMedicalDatasets.getDataMat">
+<span class="sig-name descname"><span class="pre">getDataMat</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/datasets.html#StructureMedicalDatasets.getDataMat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#datasets.StructureMedicalDatasets.getDataMat" title="Permalink to this definition">¶</a></dt>
+<dd><p>all samples. numberOfSamples by numberOfFeatures</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="datasets.SusyOfLibsvm">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">datasets.</span></span><span class="sig-name descname"><span class="pre">SusyOfLibsvm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">givenFn</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/datasets.html#SusyOfLibsvm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#datasets.SusyOfLibsvm" title="Permalink to this definition">¶</a></dt>
+<dd><p>The Susy dataset from the Libsvm website: <a class="reference external" href="https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html#SUSY">https://www.csie.ntu.edu.tw/~cjlin/libsvmtools/datasets/binary.html#SUSY</a></p>
+<ul class="simple">
+<li><p>Features: 18</p></li>
+<li><p>Samples: 5,000,000</p></li>
+<li><p>Original label: ?????????</p></li>
+<li><p>Task: classification (2 class)</p></li>
+</ul>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Personalzied-FL</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">INSTALL</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2023, Yawei Zhao.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 6.1.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.13</a>
+      
+      |
+      <a href="../_sources/references/datasetsModule.md.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
